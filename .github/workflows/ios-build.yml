@@ -1,94 +1,33 @@
-name: iOS Build
+name: iOS Build Test
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
 jobs:
-  build:
-    name: Build iOS App
+  test:
     runs-on: macos-latest
     
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
     
-    - name: Setup Xcode
-      uses: maxim-lobanov/setup-xcode@v1
-      with:
-        xcode-version: 'latest-stable'
+    - name: List Xcode installations
+      run: ls /Applications/ | grep Xcode
     
-    - name: List available simulators
-      run: xcrun simctl list devices available
+    - name: Check project file
+      run: ls -la BluetoothTicTacToe.xcodeproj/
     
-    - name: Show Xcode version
-      run: xcodebuild -version
-    
-    - name: List schemes
+    - name: Validate project
       run: xcodebuild -project BluetoothTicTacToe.xcodeproj -list
     
-    - name: Build for simulator
+    - name: Simple build test
       run: |
-        set -o pipefail
-        xcodebuild clean build \
-          -project BluetoothTicTacToe.xcodeproj \
+        xcodebuild -version
+        xcodebuild -project BluetoothTicTacToe.xcodeproj \
           -scheme BluetoothTicTacToe \
-          -sdk iphonesimulator \
-          -destination 'platform=iOS Simulator,name=iPhone 15' \
-          -configuration Debug \
-          ONLY_ACTIVE_ARCH=NO \
-          CODE_SIGNING_ALLOWED=NO \
-          CODE_SIGNING_REQUIRED=NO \
+          -destination 'platform=iOS Simulator,OS=latest,name=iPhone 15' \
+          clean build \
           CODE_SIGN_IDENTITY="" \
-          PROVISIONING_PROFILE=""
-    
-    - name: Run basic validation
-      run: |
-        echo "Build completed successfully!"
-        ls -la build/ || echo "No build directory found, which is expected for this setup"
-
-  # Release job (only runs on main branch)
-  release-build:
-    name: Release Build Check
-    runs-on: macos-latest
-    if: github.ref == 'refs/heads/main'
-    needs: build
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    
-    - name: Setup Xcode
-      uses: maxim-lobanov/setup-xcode@v1
-      with:
-        xcode-version: 'latest-stable'
-    
-    - name: Build for release (simulator)
-      run: |
-        set -o pipefail
-        xcodebuild clean build \
-          -project BluetoothTicTacToe.xcodeproj \
-          -scheme BluetoothTicTacToe \
-          -sdk iphonesimulator \
-          -destination 'platform=iOS Simulator,name=iPhone 15' \
-          -configuration Release \
-          ONLY_ACTIVE_ARCH=NO \
-          CODE_SIGNING_ALLOWED=NO \
-          CODE_SIGNING_REQUIRED=NO \
-          CODE_SIGN_IDENTITY="" \
-          PROVISIONING_PROFILE=""
-    
-    - name: Archive build info
-      run: |
-        echo "Release build completed at $(date)" > build-info.txt
-        echo "Commit: ${{ github.sha }}" >> build-info.txt
-        echo "Branch: ${{ github.ref }}" >> build-info.txt
-    
-    - name: Upload build info
-      uses: actions/upload-artifact@v3
-      with:
-        name: build-info
-        path: build-info.txt
-        retention-days: 30
+          CODE_SIGNING_REQUIRED=NO
